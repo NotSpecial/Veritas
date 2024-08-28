@@ -2,7 +2,7 @@
 
 Veritas is an easy-to-interpret domain-specific ML model to tackle causal reasoning for video streaming.
 
-Given data collected from real video streaming sessions, a video publisher may wish to answer "what-if" questions such as understanding the performance if a different Adaptive Bitrate (ABR) algorithm were used , or if a new video quality (e.g., an 8K resolution) were added to the ABR selection. Currently, Randomized Control Trials (RCTs) are widely used to answer such questions, also known as causal reasoning. However, RCTs require active interventions involving changing the system and observing the performance of real users. Thus, RCTs must be conservatively deployed as they could be disruptive to the performance of real users. 
+Given data collected from real video streaming sessions, a video publisher may wish to answer "what-if" questions such as understanding the performance if a different Adaptive Bitrate (ABR) algorithm were used , or if a new video quality (e.g., an 8K resolution) were added to the ABR selection. Currently, Randomized Control Trials (RCTs) are widely used to answer such questions, also known as causal reasoning. However, RCTs require active interventions involving changing the system and observing the performance of real users. Thus, RCTs must be conservatively deployed as they could be disruptive to the performance of real users.
 
 Veritas tackles causal reasoning using passively collected data without requiring RCTs. Veritas enables more accurate trace-driven emulations and simulations of a wide range of design alternatives without impacting the performance of live users. For a given video session, it uses the observed data (chunk download times, chunk sizes, TCP states, etc.) to infer the latent Intrinisic Network Bandwidth (INB) during the session.  Once an INB sample is obtained, we can now directly evaluate the proposed changes, and return the answer to the what-if query. Further, rather than a single point estimate, Veritas provides a range of potential outcomes reflecting the inherent uncertainty in inferences that can be made from the data.
 
@@ -25,7 +25,7 @@ The following set up has been tested on Ubuntu 22.04.
   # Installing pip3
   sudo apt update
   sudo apt upgrade
-  sudo apt-get install python3-pip 
+  sudo apt-get install python3-pip
   # Installing conda
       * https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html [python3.10]
   # Clone the repository.
@@ -48,15 +48,15 @@ For a given video sessions dataset collected by user, create an input directory 
     |_ fhash.json
 
    ```
- - **train_config.yaml**: It contains various parameters needed to train a dataset. E.g.: [sample_file](src/data/datasets/Controlled-GT-Cubic-BBA-LMH/train_config.yaml).  
+ - **train_config.yaml**: It contains various parameters needed to train a dataset. E.g.: [sample_file](src/data/datasets/Controlled-GT-Cubic-BBA-LMH/train_config.yaml).
  - **inference_config.yaml**: It contains various parameters needed for inference using a dataset. E.g.: [sample_file](src/data/datasets/Controlled-GT-Cubic-BBA-LMH/inference_config.yaml).
 
-More details about the parameters used in training & inference and how to choose them are available in the sample configuration files shared above.  
+More details about the parameters used in training & inference and how to choose them are available in the sample configuration files shared above.
 
- - **video_session_streams**: It contains the observed data relevant to a video session such as download time, 
+ - **video_session_streams**: It contains the observed data relevant to a video session such as download time,
  chunk size, TCP states (when available), etc. Each line in the video session file includes information about chunk payloads in a video session. The fields included in the file are: the start time (numpy.datetime64), end time (numpy.datetime64), size (KB), trans_time/download time (ms), cwnd (number), rtt (ms),rto (ms), ssthresh (number), last_snd (s), min_rtt (ms), delivery_rate (-). E.g.: [sample_file](./src/data/datasets/Controlled-GT-Cubic-BBA-LMH/video_session_streams/fake_trace_10013_http---edition.cnn.com_76823454_cbs_6).
- - **ground_truth_capacity**: This is useful for evaluating the performance of Veritas by comparing the inferred values 
- with ground truth, and to plot figures. In emulation experiments, the INB is known and Veritas samples aspire to match 
+ - **ground_truth_capacity**: This is useful for evaluating the performance of Veritas by comparing the inferred values
+ with ground truth, and to plot figures. In emulation experiments, the INB is known and Veritas samples aspire to match
  the INB. In real world data, we do not know the INB, hence we can make a best guess (or provide dummy values) for the INB. Please note: this data is not used by the core Veritas logic, it is only used for comparison when ground truth information is available. Each line in a ground truth capacity file includes the ground truth bandwidth (Mbps) and start time (numpy.datetime64) for that capacity. E.g.: [sample_file](./src/data/datasets/Controlled-GT-Cubic-BBA-LMH/ground_truth_capacity/fake_trace_10013_http---edition.cnn.com_76823454_cbs_6).
  - **full.json**: It contains a list of the video session files to be used to for evaluation. E.g.: [sample_file](./src/data/datasets/Controlled-GT-Cubic-BBA-LMH/full.json). This file is used to identify the sessions used for training, validation and inference. In our case, we use all the sessions for training and again use all the sessions for inference. Thus, full.json includes the names of all the sessions in the video_session_streams directory. The [script](./scripts/get_full.py) can be used to generate this file.
     ```
@@ -70,7 +70,7 @@ More details about the parameters used in training & inference and how to choose
 For reference, we have shared a [dataset](./src/data/datasets/Controlled-GT-Cubic-BBA-LMH) used in the paper, which contains the files and directories mentioned above. This [dataset](./src/data/datasets/Controlled-GT-Cubic-BBA-LMH) contains video sessions emulated using BBA ABR algorithm and a 15s client buffer. More details about emulation setup are shared in the paper.
 
 ## Using Veritas
-The following steps run Veritas for training and inference. We use the above dataset as input, but any user input directory with above defined structure can be used as an input. Please note the commands are run from the home directory, VeritasML. 
+The following steps run Veritas for training and inference. We use the above dataset as input, but any user input directory with above defined structure can be used as an input. Please note the commands are run from the home directory, VeritasML.
 
 1. Training: The parameters (general, HMM, video sessions, etc.) from training configuration file in the input directory are used for training. The trained model is saved in the logs/fit/ directory with the name: <curent_timestamp>:<suffix_in_the_config_file>.
     ```
@@ -95,7 +95,7 @@ The following steps run Veritas for training and inference. We use the above dat
           |_<session_2.png>
           ...
     ```
-Let's say for each video session, we want to sample the INB traces for a duration of <num_sample_seconds>=300s and also get <num_random_samples>=3 (as defined in the inference configuration file). Further, the transition step size (the duration for which the INB remains constant) set during training is 5s. Then, each sample_full.csv has 300/5 = 60 lines and contains '3' comma separated values for the inferred INB for the given session in each line. E.g.: [sample_full.csv](logs/transform/20230725122810:Controlled-GT-Cubic-BBA-LMH-logs/fit/20230725115631:Controlled-GT-Cubic-BBA-LMH-gaussian.asym-v10/sample/000.fake_trace_10013_http---edition.cnn.com_76823454_cbs_6/sample_full.csv).  
+Let's say for each video session, we want to sample the INB traces for a duration of <num_sample_seconds>=300s and also get <num_random_samples>=3 (as defined in the inference configuration file). Further, the transition step size (the duration for which the INB remains constant) set during training is 5s. Then, each sample_full.csv has 300/5 = 60 lines and contains '3' comma separated values for the inferred INB for the given session in each line. E.g.: [sample_full.csv](logs/transform/20230725122810:Controlled-GT-Cubic-BBA-LMH-logs/fit/20230725115631:Controlled-GT-Cubic-BBA-LMH-gaussian.asym-v10/sample/000.fake_trace_10013_http---edition.cnn.com_76823454_cbs_6/sample_full.csv).
   ```
   0,1,2
   4.5,4.5,4.5
@@ -117,18 +117,18 @@ As mentioned above, the details of the parameters used for training and inferenc
 Training: python3 fit.py -h
 Inference: python3 transform.py -h
 ```
-One of the special parameters used by Veritas is the Domain-specific emission model (f). Veritas has the flexibility to use custom functions for the emission models of Veritas’s High-order Embedded Hidden Markov Model (HoEHMM). We pass the emission functions in the fit.py and transform.py files. These functions use the fields described in the video_session_file (except download time) and 
+One of the special parameters used by Veritas is the Domain-specific emission model (f). Veritas has the flexibility to use custom functions for the emission models of Veritas’s High-order Embedded Hidden Markov Model (HoEHMM). We pass the emission functions in the fit.py and transform.py files. These functions use the fields described in the video_session_file (except download time) and
 possible capacity values for abduction as inputs and return the estimated throughput. For reference, we have included a few emission functions in [fit.py](fit.py) and [transform.py](transform.py) files in the VeritasML directory.
 
 ## Other datasets
-We have shared other datasets (along with config files) used in our emulation experiments: 
+We have shared other datasets (along with config files) used in our emulation experiments:
 - [MPC ABR, 15 s buffer](src/data/datasets/Controlled-GT-Cubic-MPC-LMH): This is used to answer what-if we change the ABR from MPC to BBA with same buffer size.
 - [BBA ABR, 15s buffer, low qualities only](src/data/datasets/Controlled-GT-Cubic-BBA-Low): This is used to answer what-if we use higher qualities in deployment.
 - Puffer (Aug 24, 2020), [all streams: [BBA](src/data/datasets/Aug24-All-BBA), [Bola1](src/data/datasets/Aug24-All-Bola1), [Bola2](src/data/datasets/Aug24-All-Bola2), slow streams: [BBA](src/data/datasets/Aug24-Slow-BBA), [Bola1](src/data/datasets/Aug24-Slow-Bola1), [Bola2](src/data/datasets/Aug24-Slow-Bola2)]: We use the Puffer data to perform validations real world data. All streams includes the sessions for the given ABR, while the slow streams includes the sessions with mean delivery rate less than 6 Mbps.
 
 We use the steps described in [this section](#using-veritas) (change the input directory path) to infer the INB traces and then run the counterfactual query to get the results.
-   
+
 ## Contact
 Please contact cbothra@purdue.edu for any questions.
-   
-   
+
+

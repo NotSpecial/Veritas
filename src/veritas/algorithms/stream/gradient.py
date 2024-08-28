@@ -88,20 +88,23 @@ class AlgorithmGradientStreamHMM(AlgorithmGradientHMM):
         initials_log = torch.log(initials)
 
         # Allocate all possible transition matrix powers ahead of computation.
-        transpowers = self.stack_matrix_power(transitions, torch.max(gaps).item())
+        transpowers = self.stack_matrix_power(
+            transitions, torch.max(gaps).item())
         transpowers_log = torch.log(transpowers)[:, :, gaps]
 
         #
         assert not torch.any(torch.isnan(initials_log)).item()
         assert not torch.any(torch.isnan(transpowers_log)).item()
         assert not torch.any(torch.isnan(emissions_log)).item()
-        (alphas_log, prob_log) = self.forward(initials_log, transpowers_log, emissions_log)
+        (alphas_log, prob_log) = self.forward(
+            initials_log, transpowers_log, emissions_log)
         betas_log = self.backward(transpowers_log, emissions_log)
 
         #
         assert not torch.any(torch.isnan(alphas_log)).item()
         assert not torch.any(torch.isnan(betas_log)).item()
-        (gammas_log, xis_log) = self.posterior(transpowers_log, emissions_log, alphas_log, betas_log)
+        (gammas_log, xis_log) = self.posterior(
+            transpowers_log, emissions_log, alphas_log, betas_log)
 
         #
         assert not torch.any(torch.isnan(gammas_log)).item()
@@ -139,26 +142,32 @@ class AlgorithmGradientStreamHMM(AlgorithmGradientHMM):
         (_, num_smaples, _) = infos.shape
 
         #
-        prob_log_sum = torch.tensor(0.0, dtype=model.dfloat, device=model.device)
-        prob_log_mean = torch.tensor(0.0, dtype=model.dfloat, device=model.device)
+        prob_log_sum = torch.tensor(
+            0.0, dtype=model.dfloat, device=model.device)
+        prob_log_mean = torch.tensor(
+            0.0, dtype=model.dfloat, device=model.device)
         for (begins, ends) in zip(infos[0], infos[-1]):
             #
-            sample = [block[begin:end] for (block, begin, end) in zip(memory, begins, ends)]
+            sample = [block[begin:end]
+                      for (block, begin, end) in zip(memory, begins, ends)]
 
             #
             (initials, transitions, gaps, emissions_log) = model.forward(sample)
             (_, length) = emissions_log.shape
             initials_log = torch.log(initials)
-            transpowers = self.stack_matrix_power(transitions, torch.max(gaps).item())
+            transpowers = self.stack_matrix_power(
+                transitions, torch.max(gaps).item())
             transpowers_log = torch.log(transpowers)[:, :, gaps]
             assert not torch.any(torch.isnan(initials_log)).item()
             assert not torch.any(torch.isnan(transpowers_log)).item()
             assert not torch.any(torch.isnan(emissions_log)).item()
-            (_, prob_log) = self.forward(initials_log, transpowers_log, emissions_log)
+            (_, prob_log) = self.forward(
+                initials_log, transpowers_log, emissions_log)
             prob_log_sum += prob_log
             prob_log_mean += prob_log / float(length)
         return (
-            onp.array([float(-prob_log_sum.item()), float(-prob_log_mean.item()) / float(num_smaples)]),
+            onp.array([float(-prob_log_sum.item()),
+                      float(-prob_log_mean.item()) / float(num_smaples)]),
             onp.array([float(num_smaples), float(num_smaples)]),
         )
 
@@ -198,20 +207,24 @@ class AlgorithmGradientStreamHMM(AlgorithmGradientHMM):
             buf_xisums = []
             for (begins, ends) in zip(infos[0], infos[-1]):
                 #
-                sample = [block[begin:end] for (block, begin, end) in zip(memory, begins, ends)]
+                sample = [block[begin:end]
+                          for (block, begin, end) in zip(memory, begins, ends)]
 
                 #
                 (initials, transitions, gaps, emissions_log) = model.forward(sample)
                 initials_log = torch.log(initials)
 
                 # Allocate all possible transition matrix powers ahead of computation.
-                transpowers = self.stack_matrix_power(transitions, torch.max(gaps).item())
+                transpowers = self.stack_matrix_power(
+                    transitions, torch.max(gaps).item())
                 transpowers_log = torch.log(transpowers)[:, :, gaps]
 
                 #
-                (alphas_log, prob_log) = self.forward(initials_log, transpowers_log, emissions_log)
+                (alphas_log, prob_log) = self.forward(
+                    initials_log, transpowers_log, emissions_log)
                 betas_log = self.backward(transpowers_log, emissions_log)
-                (gammas_log, xis_log) = self.posterior(transpowers_log, emissions_log, alphas_log, betas_log)
+                (gammas_log, xis_log) = self.posterior(
+                    transpowers_log, emissions_log, alphas_log, betas_log)
                 gammas = torch.exp(gammas_log)
                 xisums = torch.exp(torch.logsumexp(xis_log, dim=2))
 
@@ -289,13 +302,16 @@ class AlgorithmGradientStreamHMM(AlgorithmGradientHMM):
         """
         #
         total = int(seconds_total / seconds_unit)
-        true_samples = -torch.ones(num, total, dtype=xis_log.dtype, device=xis_log.device)
+        true_samples = -torch.ones(num, total,
+                                   dtype=xis_log.dtype, device=xis_log.device)
 
         # Sample critical points according to throughput estimation function.
         (_, _, length) = xis_log.shape
         rng = torch.Generator(xis_log.device).manual_seed(seed)
-        probs = torch.rand((num, length + 1), generator=rng, dtype=xis_log.dtype, device=xis_log.device)
-        crit_samples = torch.reshape(self.sample_hidden_traces(probs, gammas_log, xis_log), (num, length + 1))
+        probs = torch.rand((num, length + 1), generator=rng,
+                           dtype=xis_log.dtype, device=xis_log.device)
+        crit_samples = torch.reshape(self.sample_hidden_traces(
+            probs, gammas_log, xis_log), (num, length + 1))
 
         # Safely fill critial points to samples.
         steps_start = discretize_chunk_times_start(times_start, seconds_unit)
@@ -303,7 +319,8 @@ class AlgorithmGradientStreamHMM(AlgorithmGradientHMM):
         assert torch.all(gaps[1:] == steps_start[1:] - steps_start[:-1])
         for (i, t) in enumerate(steps_start):
             #
-            assert torch.all(true_samples[:, t] < 0) or torch.all(true_samples[:, t] == crit_samples[:, i])
+            assert torch.all(true_samples[:, t] < 0) or torch.all(
+                true_samples[:, t] == crit_samples[:, i])
             true_samples[:, t] = crit_samples[:, i]
 
         # Sample and fill between critical points.
@@ -326,6 +343,8 @@ class AlgorithmGradientStreamHMM(AlgorithmGradientHMM):
         )
 
         # Sample after all critical points.
-        probs = torch.rand((num, total - step_last - 1), generator=rng, dtype=xis_log.dtype, device=xis_log.device)
-        self.fill_after_traces(probs, total, step_last, crit_samples, transpowers_log, true_samples)
+        probs = torch.rand((num, total - step_last - 1), generator=rng,
+                           dtype=xis_log.dtype, device=xis_log.device)
+        self.fill_after_traces(probs, total, step_last,
+                               crit_samples, transpowers_log, true_samples)
         return (crit_samples, true_samples)

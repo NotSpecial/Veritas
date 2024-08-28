@@ -48,11 +48,16 @@ class FrameworkFitHMMStream(FrameworkFitHMM[DataHMMStream, AlgorithmGradientStre
         """
         #
         FrameworkFitHMM.arguments(self)
-        self._parser.add_argument("--capacity-max", type=float, required=True, help="Maximum capacity.")
-        self._parser.add_argument("--filter-capmax", action="store_true", help="Filter maximum capacity in dataset.")
-        self._parser.add_argument("--capacity-unit", type=float, required=True, help="Capacity unit.")
-        self._parser.add_argument("--capacity-min", type=float, required=False, default=0.1, help="Minimum capacity.")
-        self._parser.add_argument("--transition-unit", type=float, required=True, help="Transition unit time.")
+        self._parser.add_argument(
+            "--capacity-max", type=float, required=True, help="Maximum capacity.")
+        self._parser.add_argument(
+            "--filter-capmax", action="store_true", help="Filter maximum capacity in dataset.")
+        self._parser.add_argument(
+            "--capacity-unit", type=float, required=True, help="Capacity unit.")
+        self._parser.add_argument(
+            "--capacity-min", type=float, required=False, default=0.1, help="Minimum capacity.")
+        self._parser.add_argument(
+            "--transition-unit", type=float, required=True, help="Transition unit time.")
         self._parser.add_argument(
             "--initeta",
             type=float,
@@ -65,7 +70,8 @@ class FrameworkFitHMMStream(FrameworkFitHMM[DataHMMStream, AlgorithmGradientStre
             required=True,
             help="Weight for emission transition matrix update.",
         )
-        self._parser.add_argument("--vareta", type=float, required=True, help="Weight for emission variance update.")
+        self._parser.add_argument(
+            "--vareta", type=float, required=True, help="Weight for emission variance update.")
         self._parser.add_argument(
             "--varinit",
             type=float,
@@ -184,10 +190,12 @@ class FrameworkFitHMMStream(FrameworkFitHMM[DataHMMStream, AlgorithmGradientStre
         #
         if self._initial == "generic":
             #
-            initial = ModelInitialGeneric(self._num_hiddens, dint=None, dfloat=torch.float64, initeta=self._initeta)
+            initial = ModelInitialGeneric(
+                self._num_hiddens, dint=None, dfloat=torch.float64, initeta=self._initeta)
         else:
             #
-            raise RuntimeError('Unknown video streaming initial model "{:s}".'.format(self._initial))
+            raise RuntimeError(
+                'Unknown video streaming initial model "{:s}".'.format(self._initial))
 
         #
         if self._transition == "generic":
@@ -245,7 +253,8 @@ class FrameworkFitHMMStream(FrameworkFitHMM[DataHMMStream, AlgorithmGradientStre
             )
         else:
             #
-            raise RuntimeError('Unknown video streaming transition model "{:s}".'.format(self._transition))
+            raise RuntimeError(
+                'Unknown video streaming transition model "{:s}".'.format(self._transition))
 
         #
         if self._emission == "categorical":
@@ -262,7 +271,8 @@ class FrameworkFitHMMStream(FrameworkFitHMM[DataHMMStream, AlgorithmGradientStre
         elif self._emission == "gaussian":
             #
             emission = ModelEmissionStreamGaussianPseudo(
-                ModelEmissionGaussian(self._num_hiddens, 1, dint=None, dfloat=torch.float64, emiteta=1.0),
+                ModelEmissionGaussian(
+                    self._num_hiddens, 1, dint=None, dfloat=torch.float64, emiteta=1.0),
             )
         elif self._emission in capacity_to_throughput.keys():
             # Load external supporting data.
@@ -296,11 +306,13 @@ class FrameworkFitHMMStream(FrameworkFitHMM[DataHMMStream, AlgorithmGradientStre
             )
         else:
             #
-            raise RuntimeError('Unknown video streaming emission model "{:s}".'.format(self._emission))
+            raise RuntimeError(
+                'Unknown video streaming emission model "{:s}".'.format(self._emission))
 
         #
         thrng = torch.Generator("cpu").manual_seed(self._seed)
-        self._model = ModelHMM(initial, transition, emission).reset(thrng).to(self._device).sgd(dict(lr=1.0))
+        self._model = ModelHMM(initial, transition, emission).reset(
+            thrng).to(self._device).sgd(dict(lr=1.0))
 
     def algorithms(self: FrameworkFitHMMStream, /) -> None:
         R"""
@@ -313,4 +325,5 @@ class FrameworkFitHMMStream(FrameworkFitHMM[DataHMMStream, AlgorithmGradientStre
         -------
         """
         #
-        self._algorithm = AlgorithmGradientStreamHMM(self._model, jit=self._jit)
+        self._algorithm = AlgorithmGradientStreamHMM(
+            self._model, jit=self._jit)

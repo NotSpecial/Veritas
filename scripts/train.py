@@ -2,11 +2,13 @@ import argparse
 import os
 import yaml
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_directory", required=True)
     args = parser.parse_args()
     return args
+
 
 args = parse_arguments()
 
@@ -24,6 +26,7 @@ cmd = f"python3 -u fit.py \
         --emission {train_config['emission']} \
         --num-epochs {train_config['num_epochs']} \
         --capacity-max {train_config['capacity_max']} --capacity-unit {train_config['capacity_unit']} \
+        --capacity-min {train_config['capacity_min']} \
         --transition-unit {train_config['transition_unit']} \
         --initeta {train_config['initeta']} --transeta {train_config['transeta']} \
         --vareta {train_config['vareta']} --varinit {train_config['varinit']} \

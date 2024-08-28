@@ -55,14 +55,22 @@ def baum_welch_forward_log_(
     """
     #
     (num_states, num_times) = emissions_log.shape
-    alphas_log = torch.zeros(num_states, num_times, dtype=emissions_log.dtype, device=emissions_log.device)
+    alphas_log = torch.zeros(
+        num_states,
+        num_times,
+        dtype=emissions_log.dtype,
+        device=emissions_log.device,
+    )
 
     #
     alphas_log[:, 0] = initials_log + emissions_log[:, 0]
     for t in range(1, num_times):
         #
         alphas_log[:, t] = (
-            torch.logsumexp(alphas_log[:, [t - 1]] + transpowers_log[:, :, t], dim=0) + emissions_log[:, t]
+            torch.logsumexp(
+                alphas_log[:, [t - 1]] + transpowers_log[:, :, t], dim=0
+            )
+            + emissions_log[:, t]
         )
 
     #
@@ -70,7 +78,9 @@ def baum_welch_forward_log_(
     return (alphas_log, prob_log)
 
 
-def baum_welch_backward_log_(transpowers_log: torch.Tensor, emissions_log: torch.Tensor) -> torch.Tensor:
+def baum_welch_backward_log_(
+    transpowers_log: torch.Tensor, emissions_log: torch.Tensor
+) -> torch.Tensor:
     R"""
     Baum-Welch backward pass in log version.
 
@@ -88,7 +98,12 @@ def baum_welch_backward_log_(transpowers_log: torch.Tensor, emissions_log: torch
     """
     #
     (num_states, num_times) = emissions_log.shape
-    betas_log = torch.zeros(num_states, num_times, dtype=emissions_log.dtype, device=emissions_log.device)
+    betas_log = torch.zeros(
+        num_states,
+        num_times,
+        dtype=emissions_log.dtype,
+        device=emissions_log.device,
+    )
     transitions_t_log = torch.transpose(transpowers_log, 0, 1)
 
     #
@@ -96,7 +111,9 @@ def baum_welch_backward_log_(transpowers_log: torch.Tensor, emissions_log: torch
     for t in range(num_times - 2, -1, -1):
         #
         betas_log[:, t] = torch.logsumexp(
-            betas_log[:, [t + 1]] + emissions_log[:, [t + 1]] + transitions_t_log[:, :, t + 1],
+            betas_log[:, [t + 1]]
+            + emissions_log[:, [t + 1]]
+            + transitions_t_log[:, :, t + 1],
             dim=0,
         )
     return betas_log
@@ -139,16 +156,22 @@ def baum_welch_posterior_log_(
     gammas_log -= torch.logsumexp(gammas_log, dim=0, keepdim=True)
 
     #
-    alphas_log_ = torch.reshape(alphas_log[:, : num_times - 1], (num_states, 1, num_times - 1))
+    alphas_log_ = torch.reshape(
+        alphas_log[:, : num_times - 1], (num_states, 1, num_times - 1)
+    )
     transpowers_log_ = transpowers_log[:, :, 1:]
-    emissions_log_ = torch.reshape(emissions_log[:, 1:], (1, num_states, num_times - 1))
+    emissions_log_ = torch.reshape(
+        emissions_log[:, 1:], (1, num_states, num_times - 1)
+    )
     betas_log_ = torch.reshape(betas_log[:, 1:], (1, num_states, num_times - 1))
     xis_log = alphas_log_ + transpowers_log_ + emissions_log_ + betas_log_
     xis_log -= torch.logsumexp(xis_log, dim=(0, 1), keepdim=True)
     return (gammas_log, xis_log)
 
 
-def sample_hidden_traces_(probs: torch.Tensor, gammas_log: torch.Tensor, xis_log: torch.Tensor) -> torch.Tensor:
+def sample_hidden_traces_(
+    probs: torch.Tensor, gammas_log: torch.Tensor, xis_log: torch.Tensor
+) -> torch.Tensor:
     R"""
     Baum-Welch posterior pass in log version.
 
@@ -170,18 +193,26 @@ def sample_hidden_traces_(probs: torch.Tensor, gammas_log: torch.Tensor, xis_log
     (num_samples, num_steps) = probs.shape
 
     # Get CDF from normalized distribution.
-    gammas_cumsum = torch.cumsum(torch.exp(gammas_log - torch.logsumexp(gammas_log, dim=0)), dim=0)
-    xis_cumsum = torch.cumsum(torch.exp(xis_log - torch.logsumexp(xis_log, dim=0)), dim=0)
+    gammas_cumsum = torch.cumsum(
+        torch.exp(gammas_log - torch.logsumexp(gammas_log, dim=0)), dim=0
+    )
+    xis_cumsum = torch.cumsum(
+        torch.exp(xis_log - torch.logsumexp(xis_log, dim=0)), dim=0
+    )
 
     #
-    traces = torch.zeros(num_samples, num_steps, dtype=torch.long, device=probs.device)
+    traces = torch.zeros(
+        num_samples, num_steps, dtype=torch.long, device=probs.device
+    )
     for i in range(num_samples):
         #
         greaters = torch.nonzero(gammas_cumsum > probs[i, num_steps - 1])
         traces[i, num_steps - 1] = torch.min(greaters)
         for t in range(num_steps - 2, -1, -1):
             #
-            greaters = torch.nonzero(xis_cumsum[:, traces[i, t + 1], t] > probs[i, t])
+            greaters = torch.nonzero(
+                xis_cumsum[:, traces[i, t + 1], t] > probs[i, t]
+            )
             traces[i, t] = torch.min(greaters)
     return traces
 
@@ -232,16 +263,29 @@ def fill_between_traces_(
         for t in range(step_upper - 1, step_lower, -1):
             #
             for n in range(num):
-                # Sample a state between from the last observation.
-                pdf_log_lower = transpowers_log[state_lower[n], :, t - step_lower]
-                pdf_log_upper = transpowers_log[:, state_upper[n], 1]
-                pdf_log = pdf_log_lower + pdf_log_upper + emissions_log[:, t]
-                cdf = torch.cumsum(torch.exp(pdf_log - torch.logsumexp(pdf_log, dim=0)), dim=0)
-                state = torch.min(torch.nonzero(cdf > probs[n, ptr]))
-                state_upper[n] = state
+                # ALEX: this is _not_ working. emissions_log does not have
+                # enough values, leading to out of bounds errors if there are
+                # gaps to be filled. As a hotfix, I'm not sampling a state but
+                # instead re-use the last valid value. If the value is valid,
+                # keep it.
+                if full_samples[n, t] != -1:
+                    continue
+                tstar = t - 1
+                while full_samples[n, tstar] == -1:
+                    tstar -= 1
+                full_samples[n, t] = full_samples[n, tstar]
 
-                #
-                full_samples[n, t] = state
+                # Original code:
+                # # Sample a state between from the last observation.
+                # pdf_log_lower = transpowers_log[state_lower[n], :, t - step_lower]
+                # pdf_log_upper = transpowers_log[:, state_upper[n], 1]
+                # pdf_log = pdf_log_lower + pdf_log_upper + emissions_log[:, t]
+                # cdf = torch.cumsum(torch.exp(pdf_log - torch.logsumexp(pdf_log, dim=0)), dim=0)
+                # state = torch.min(torch.nonzero(cdf > probs[n, ptr]))
+                # state_upper[n] = state
+
+                # #
+                # full_samples[n, t] = state
             ptr += 1
 
 
@@ -284,16 +328,39 @@ def fill_after_traces_(
         for n in range(num):
             #
             pdf_log = transpowers_log[state_lower[n], :, 0]
-            cdf = torch.cumsum(torch.exp(pdf_log - torch.logsumexp(pdf_log, dim=0)), dim=0)
+            cdf = torch.cumsum(
+                torch.exp(pdf_log - torch.logsumexp(pdf_log, dim=0)), dim=0
+            )
             state = torch.min(torch.nonzero(cdf > probs[n, i]))
             full_samples[n, step_last + i + 1] = state
 
 
 #
-stack_matrix_power = {False: stack_matrix_power_, True: torch.jit.script(stack_matrix_power_)}
-baum_welch_forward_log = {False: baum_welch_forward_log_, True: torch.jit.script(baum_welch_forward_log_)}
-baum_welch_backward_log = {False: baum_welch_backward_log_, True: torch.jit.script(baum_welch_backward_log_)}
-baum_welch_posterior_log = {False: baum_welch_posterior_log_, True: torch.jit.script(baum_welch_posterior_log_)}
-sample_hidden_traces = {False: sample_hidden_traces_, True: torch.jit.script(sample_hidden_traces_)}
-fill_between_traces = {False: fill_between_traces_, True: torch.jit.script(fill_between_traces_)}
-fill_after_traces = {False: fill_after_traces_, True: torch.jit.script(fill_after_traces_)}
+stack_matrix_power = {
+    False: stack_matrix_power_,
+    True: torch.jit.script(stack_matrix_power_),
+}
+baum_welch_forward_log = {
+    False: baum_welch_forward_log_,
+    True: torch.jit.script(baum_welch_forward_log_),
+}
+baum_welch_backward_log = {
+    False: baum_welch_backward_log_,
+    True: torch.jit.script(baum_welch_backward_log_),
+}
+baum_welch_posterior_log = {
+    False: baum_welch_posterior_log_,
+    True: torch.jit.script(baum_welch_posterior_log_),
+}
+sample_hidden_traces = {
+    False: sample_hidden_traces_,
+    True: torch.jit.script(sample_hidden_traces_),
+}
+fill_between_traces = {
+    False: fill_between_traces_,
+    True: torch.jit.script(fill_between_traces_),
+}
+fill_after_traces = {
+    False: fill_after_traces_,
+    True: torch.jit.script(fill_after_traces_),
+}
